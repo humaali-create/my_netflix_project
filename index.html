@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netflix Content Coordinator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <h1>Netflix Content Coordinator</h1>
+
+    <div id="status">Loading data...</div>
+
+    <div class="buttons">
+        <button id="pg13Btn">Show PG-13 Titles</button>
+        <button id="longBtn">Movies Longer Than 90 Minutes</button>
+        <button id="resetBtn">Show All</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Genre</th>
+                <th>Rating</th>
+                <th>Duration</th>
+                <th>Type</th>
+            </tr>
+        </thead>
+
+        <tbody id="movieTable"></tbody>
+    </table>
+
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
