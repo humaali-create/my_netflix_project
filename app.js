@@ -10,20 +10,9 @@ function setStatus(message) {
     }
 }
 
-// Use PapaParse (included via CDN in index.html) for robust CSV parsing.
-function parseCSVWithPapa(text) {
-    try {
-        const result = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
-        return result.data || [];
-    } catch (err) {
-        console.error('PapaParse error', err);
-        return [];
-    }
-}
-
 function loadFromFile(file) {
-    showSpinner();
     try {
+        showSpinner();
         Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
@@ -31,14 +20,15 @@ function loadFromFile(file) {
                 netflixData = (results.data || []).filter(item => item && Object.keys(item).length);
                 populateFilterOptions(netflixData);
                 filteredData = netflixData.slice();
-                currentPage = 1;
+                // Preserve the user's page between uploads. displayData clamps it
+                // to the final page when the replacement dataset is shorter.
                 displayData(filteredData);
                 setStatus(`Loaded ${netflixData.length} items from file.`);
-                hideSpinner();
+                document.getElementById("spinner").style.display = "none";
             },
             error: err => {
                 console.error('File parse error', err);
-                hideSpinner();
+                document.getElementById("spinner").style.display = "none";
                 setStatus('Failed to parse CSV file.');
             }
         });
@@ -55,6 +45,7 @@ function displayData(data) {
     table.innerHTML = "";
 
     if (!data.length) {
+        currentPage = 1;
         table.innerHTML = `<tr class="empty-row"><td colspan="5">No results found.</td></tr>`;
         updatePagination(0);
         return;
@@ -133,65 +124,6 @@ function makePageButton(p) {
 
 function makeEllipsis() {
     const span = document.createElement('span'); span.textContent = '...'; span.className = 'muted'; span.style.padding = '0 6px'; return span;
-}
-
-async function loadNetflixData() {
-    setStatus("Loading data...");
-
-    const candidates = [
-        "./Data/netflix_titles.csv",
-        "Data/netflix_titles.csv"
-    ];
-
-    try {
-        let response = null;
-        let lastError = null;
-
-        for (const url of candidates) {
-            try {
-                response = await fetch(url, { cache: "no-store" });
-                if (response.ok) {
-                    break;
-                }
-                lastError = new Error(`HTTP ${response.status} for ${url}`);
-            } catch (error) {
-                lastError = error;
-            }
-        }
-
-        if (!response?.ok) {
-            throw lastError || new Error("Unable to fetch CSV");
-        }
-
-        const csvText = await response.text();
-        // Try PapaParse first, fall back to simple split if needed
-        let parsed = parseCSVWithPapa(csvText);
-        if (!parsed || !parsed.length) {
-            // fallback: simple parsing by lines
-            const lines = csvText.split(/\r?\n/).filter(l => l.trim());
-            const headers = lines.shift().split(',').map(h => h.trim());
-            parsed = lines.map(line => {
-                const values = line.split(',');
-                const obj = {};
-                headers.forEach((h, i) => obj[h] = values[i] ?? '');
-                return obj;
-            });
-        }
-
-        netflixData = parsed.filter(item => item && Object.keys(item).length);
-        console.log("Loaded rows:", netflixData.length);
-
-        populateFilterOptions(netflixData);
-        filteredData = netflixData.slice();
-        displayData(filteredData);
-        setStatus(`Loaded ${netflixData.length} items.`);
-    } catch (error) {
-        console.error(error);
-        const message = window.location.protocol === "file:"
-            ? "The CSV could not be loaded because the page is being opened directly from the filesystem. Run a local server such as python3 -m http.server 8000 and open http://127.0.0.1:8000/."
-            : "Failed to load the CSV. Check the server and file path.";
-        setStatus(message);
-    }
 }
 
 function getUniqueGenres(data) {
@@ -345,10 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('lastPage')?.addEventListener('click', () => { const totalPages = Math.max(1, Math.ceil((filteredData.length||0)/pageSize)); currentPage = totalPages; displayData(filteredData); });
     document.getElementById('pageSizeSelect')?.addEventListener('change', (e) => { pageSize = parseInt(e.target.value,10)||25; currentPage=1; displayData(filteredData); });
 
-    // MVP change: do NOT auto-load any CSV on startup.
-    // - Removed automatic `loadNetflixData()` call and spinner show so page starts empty.
-    // - Data will only be loaded when the user selects a file via `#csvFileInput`.
-    // Ensure spinner is hidden on startup (HTML default sets it to display:none).
+    // Data is loaded only when the user selects a file via `#csvFileInput`.
 });
 
 function showSpinner(){
