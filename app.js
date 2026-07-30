@@ -337,14 +337,18 @@ document.addEventListener("DOMContentLoaded", () => {
         if (f) loadFromFile(f);
     });
 
+    // Prev/Next pagination handlers
     document.getElementById('prevPage')?.addEventListener('click', () => { if (currentPage>1) { currentPage--; displayData(filteredData); } });
     document.getElementById('nextPage')?.addEventListener('click', () => { currentPage++; displayData(filteredData); });
+    // First/Last page buttons (added to support CSV-first MVP pagination)
+    document.getElementById('firstPage')?.addEventListener('click', () => { currentPage = 1; displayData(filteredData); });
+    document.getElementById('lastPage')?.addEventListener('click', () => { const totalPages = Math.max(1, Math.ceil((filteredData.length||0)/pageSize)); currentPage = totalPages; displayData(filteredData); });
     document.getElementById('pageSizeSelect')?.addEventListener('change', (e) => { pageSize = parseInt(e.target.value,10)||25; currentPage=1; displayData(filteredData); });
 
-    // show spinner while loading
-    showSpinner();
-
-    loadNetflixData().finally(() => hideSpinner());
+    // MVP change: do NOT auto-load any CSV on startup.
+    // - Removed automatic `loadNetflixData()` call and spinner show so page starts empty.
+    // - Data will only be loaded when the user selects a file via `#csvFileInput`.
+    // Ensure spinner is hidden on startup (HTML default sets it to display:none).
 });
 
 function showSpinner(){

@@ -10,7 +10,8 @@
 <body>
     <h1>Netflix Content Coordinator</h1>
 
-    <div id="status">Loading data...</div>
+    <!-- Startup status: instruct user to upload CSV (MVP behavior) -->
+    <div id="status">Upload a CSV file to begin.</div>
 
     <div class="buttons">
         <button id="pg13Btn">Show PG-13 Titles</button>
@@ -51,7 +52,7 @@
     </table>
 
     <div class="pagination" style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:12px;">
-        <button id="prevPage">Prev</button>
+        <!-- fixed duplicate IDs: order is First, Prev, numeric buttons, Next, Last -->
         <button id="firstPage"><<</button>
         <button id="prevPage">Prev</button>
         <div id="pageButtons" style="display:inline-flex;gap:6px;align-items:center;"></div>
