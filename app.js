@@ -21,6 +21,34 @@ function parseCSVWithPapa(text) {
     }
 }
 
+function loadFromFile(file) {
+    showSpinner();
+    try {
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: results => {
+                netflixData = (results.data || []).filter(item => item && Object.keys(item).length);
+                populateFilterOptions(netflixData);
+                filteredData = netflixData.slice();
+                currentPage = 1;
+                displayData(filteredData);
+                setStatus(`Loaded ${netflixData.length} items from file.`);
+                hideSpinner();
+            },
+            error: err => {
+                console.error('File parse error', err);
+                hideSpinner();
+                setStatus('Failed to parse CSV file.');
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        hideSpinner();
+        setStatus('Failed to read file.');
+    }
+}
+
 function displayData(data) {
     const table = document.getElementById("movieTable");
     if (!table) return;
@@ -264,6 +292,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById('applyFiltersBtn')?.addEventListener('click', () => { currentPage = 1; applyFilters(); });
     document.getElementById('clearFiltersBtn')?.addEventListener('click', () => { clearFilters(); });
+
+    document.getElementById('csvFileInput')?.addEventListener('change', (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (f) loadFromFile(f);
+    });
 
     document.getElementById('prevPage')?.addEventListener('click', () => { if (currentPage>1) { currentPage--; displayData(filteredData); } });
     document.getElementById('nextPage')?.addEventListener('click', () => { currentPage++; displayData(filteredData); });

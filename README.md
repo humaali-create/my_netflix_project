@@ -17,6 +17,10 @@ python3 -m http.server 8000
 # open http://127.0.0.1:8000/
 ```
 
+Quick alternative: upload CSV in-browser
+
+If you prefer not to run a local server, open `index.html` in a browser and use the **Upload CSV** control at the top of the page to load your local `netflix_titles.csv` file. The page will parse it in-browser using PapaParse.
+
 Notes for presentation:
 - The demo is best served from a local HTTP server or deployed (Vercel/GitHub Pages) because browsers block `fetch()` against local files when opened via `file://`.
 
