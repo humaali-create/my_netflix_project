@@ -86,10 +86,29 @@ function displayData(data) {
 async function loadNetflixData() {
     setStatus("Loading data...");
 
+    const candidates = [
+        "./Data/netflix_titles.csv",
+        "Data/netflix_titles.csv"
+    ];
+
     try {
-        const response = await fetch("./Data/netflix_titles.csv", { cache: "no-store" });
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+        let response = null;
+        let lastError = null;
+
+        for (const url of candidates) {
+            try {
+                response = await fetch(url, { cache: "no-store" });
+                if (response.ok) {
+                    break;
+                }
+                lastError = new Error(`HTTP ${response.status} for ${url}`);
+            } catch (error) {
+                lastError = error;
+            }
+        }
+
+        if (!response?.ok) {
+            throw lastError || new Error("Unable to fetch CSV");
         }
 
         const csvText = await response.text();
@@ -102,7 +121,10 @@ async function loadNetflixData() {
         setStatus(`Loaded ${netflixData.length} items.`);
     } catch (error) {
         console.error(error);
-        setStatus("Failed to load the CSV. Check the server and file path.");
+        const message = window.location.protocol === "file:"
+            ? "The CSV could not be loaded because the page is being opened directly from the filesystem. Run a local server such as python3 -m http.server 8000 and open http://127.0.0.1:8000/."
+            : "Failed to load the CSV. Check the server and file path.";
+        setStatus(message);
     }
 }
 
