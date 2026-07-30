@@ -90,10 +90,49 @@ function updatePagination(totalItems){
     const pageInfo = document.getElementById('pageInfo');
     const prev = document.getElementById('prevPage');
     const next = document.getElementById('nextPage');
+    const first = document.getElementById('firstPage');
+    const last = document.getElementById('lastPage');
+    const pageButtons = document.getElementById('pageButtons');
     const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
     pageInfo.textContent = `Page ${currentPage} / ${totalPages}`;
     prev.disabled = currentPage <= 1;
     next.disabled = currentPage >= totalPages;
+    first.disabled = currentPage <= 1;
+    last.disabled = currentPage >= totalPages;
+
+    // render numeric page buttons (windowed)
+    if (pageButtons) {
+        pageButtons.innerHTML = '';
+        const maxButtons = 7;
+        let start = Math.max(1, currentPage - Math.floor(maxButtons/2));
+        let end = start + maxButtons - 1;
+        if (end > totalPages) { end = totalPages; start = Math.max(1, end - maxButtons + 1); }
+
+        if (start > 1) {
+            const el = makePageButton(1); pageButtons.appendChild(el);
+            if (start > 2) pageButtons.appendChild(makeEllipsis());
+        }
+
+        for (let p = start; p <= end; p++) pageButtons.appendChild(makePageButton(p));
+
+        if (end < totalPages) {
+            if (end < totalPages - 1) pageButtons.appendChild(makeEllipsis());
+            pageButtons.appendChild(makePageButton(totalPages));
+        }
+    }
+}
+
+function makePageButton(p) {
+    const btn = document.createElement('button');
+    btn.textContent = p;
+    btn.style.minWidth = '36px';
+    if (p === currentPage) { btn.disabled = true; btn.style.fontWeight = '700'; }
+    btn.addEventListener('click', () => { currentPage = p; displayData(filteredData); });
+    return btn;
+}
+
+function makeEllipsis() {
+    const span = document.createElement('span'); span.textContent = '...'; span.className = 'muted'; span.style.padding = '0 6px'; return span;
 }
 
 async function loadNetflixData() {

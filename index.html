@@ -52,8 +52,11 @@
 
     <div class="pagination" style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:12px;">
         <button id="prevPage">Prev</button>
-        <span id="pageInfo">Page 1</span>
+        <button id="firstPage"><<</button>
+        <button id="prevPage">Prev</button>
+        <div id="pageButtons" style="display:inline-flex;gap:6px;align-items:center;"></div>
         <button id="nextPage">Next</button>
+        <button id="lastPage">>></button>
         <label style="margin-left:8px;" class="muted">Per page:
             <select id="pageSizeSelect">
                 <option value="10">10</option>
