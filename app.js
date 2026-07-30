@@ -1,5 +1,7 @@
 let netflixData = [];
 let filteredData = [];
+let currentPage = 1;
+let pageSize = 25;
 
 function setStatus(message) {
     const statusEl = document.getElementById("status");
@@ -22,25 +24,48 @@ function parseCSVWithPapa(text) {
 function displayData(data) {
     const table = document.getElementById("movieTable");
     if (!table) return;
-
     table.innerHTML = "";
 
     if (!data.length) {
-        table.innerHTML = `<tr><td colspan="5">No results found.</td></tr>`;
+        table.innerHTML = `<tr class="empty-row"><td colspan="5">No results found.</td></tr>`;
+        updatePagination(0);
         return;
     }
 
-    data.slice(0, 100).forEach(movie => {
-        table.innerHTML += `
-            <tr>
-                <td>${movie.title || ""}</td>
-                <td>${movie.listed_in || ""}</td>
-                <td>${movie.rating || ""}</td>
-                <td>${movie.duration || ""}</td>
-                <td>${movie.type || ""}</td>
-            </tr>
+    const total = data.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    const pageItems = data.slice(start, end);
+
+    pageItems.forEach(movie => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${escapeHtml(movie.title || "")}</td>
+            <td>${escapeHtml(movie.listed_in || movie['listed_in'] || "")}</td>
+            <td>${escapeHtml(movie.rating || "")}</td>
+            <td>${escapeHtml(movie.duration || "")}</td>
+            <td>${escapeHtml(movie.type || "")}</td>
         `;
+        table.appendChild(tr);
     });
+
+    updatePagination(total);
+}
+
+function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[s]);
+}
+
+function updatePagination(totalItems){
+    const pageInfo = document.getElementById('pageInfo');
+    const prev = document.getElementById('prevPage');
+    const next = document.getElementById('nextPage');
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    pageInfo.textContent = `Page ${currentPage} / ${totalPages}`;
+    prev.disabled = currentPage <= 1;
+    next.disabled = currentPage >= totalPages;
 }
 
 async function loadNetflixData() {
@@ -215,7 +240,9 @@ function clearFilters() {
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("pg13Btn")?.addEventListener("click", () => {
         const filtered = netflixData.filter(movie => movie.rating === "PG-13");
-        displayData(filtered);
+        filteredData = filtered;
+        currentPage = 1;
+        displayData(filteredData);
     });
 
     document.getElementById("longBtn")?.addEventListener("click", () => {
@@ -230,8 +257,30 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     document.getElementById("resetBtn")?.addEventListener("click", () => {
-        displayData(netflixData);
+        filteredData = netflixData.slice();
+        currentPage = 1;
+        displayData(filteredData);
     });
 
-    loadNetflixData();
+    document.getElementById('applyFiltersBtn')?.addEventListener('click', () => { currentPage = 1; applyFilters(); });
+    document.getElementById('clearFiltersBtn')?.addEventListener('click', () => { clearFilters(); });
+
+    document.getElementById('prevPage')?.addEventListener('click', () => { if (currentPage>1) { currentPage--; displayData(filteredData); } });
+    document.getElementById('nextPage')?.addEventListener('click', () => { currentPage++; displayData(filteredData); });
+    document.getElementById('pageSizeSelect')?.addEventListener('change', (e) => { pageSize = parseInt(e.target.value,10)||25; currentPage=1; displayData(filteredData); });
+
+    // show spinner while loading
+    showSpinner();
+
+    loadNetflixData().finally(() => hideSpinner());
 });
+
+function showSpinner(){
+    const s = document.getElementById('spinner');
+    if(s) s.style.display = '';
+}
+
+function hideSpinner(){
+    const s = document.getElementById('spinner');
+    if(s) s.style.display = 'none';
+}
