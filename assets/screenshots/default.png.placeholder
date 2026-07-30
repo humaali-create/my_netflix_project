@@ -1,0 +1,8 @@
+Placeholder for default screenshot.
+
+I captured the default page view during the session. To replace this placeholder with the actual screenshot:
+
+1. Open http://127.0.0.1:8000/ in your browser.
+2. Take a full-page screenshot (Cmd+Shift+5 on macOS or browser DevTools > Run command > Capture full size screenshot).
+3. Save the image as `default.png` and place it in this folder (`assets/screenshots/`).
+4. Commit and push the image to the repo.
