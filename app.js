@@ -1,4 +1,5 @@
 let netflixData = [];
+let filteredData = [];
 
 function setStatus(message) {
     const statusEl = document.getElementById("status");
@@ -7,56 +8,15 @@ function setStatus(message) {
     }
 }
 
-function parseCSV(text) {
-    const rows = [];
-    let row = [];
-    let field = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const next = text[i + 1];
-
-        if (char === '"') {
-            if (inQuotes && next === '"') {
-                field += '"';
-                i++;
-            } else {
-                inQuotes = !inQuotes;
-            }
-        } else if (char === ',' && !inQuotes) {
-            row.push(field);
-            field = "";
-        } else if ((char === '\n' || char === '\r') && !inQuotes) {
-            if (char === '\r' && next === '\n') i++;
-            row.push(field);
-            if (row.some(cell => cell !== "")) {
-                rows.push(row);
-            }
-            row = [];
-            field = "";
-        } else {
-            field += char;
-        }
+// Use PapaParse (included via CDN in index.html) for robust CSV parsing.
+function parseCSVWithPapa(text) {
+    try {
+        const result = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: false });
+        return result.data || [];
+    } catch (err) {
+        console.error('PapaParse error', err);
+        return [];
     }
-
-    if (field.length > 0 || row.length > 0) {
-        row.push(field);
-        if (row.some(cell => cell !== "")) {
-            rows.push(row);
-        }
-    }
-
-    if (rows.length === 0) return [];
-
-    const [headers, ...dataRows] = rows;
-    return dataRows.map(values => {
-        const obj = {};
-        headers.forEach((header, index) => {
-            obj[header.trim()] = values[index] ?? "";
-        });
-        return obj;
-    });
 }
 
 function displayData(data) {
@@ -112,12 +72,26 @@ async function loadNetflixData() {
         }
 
         const csvText = await response.text();
-        const parsed = parseCSV(csvText);
+        // Try PapaParse first, fall back to simple split if needed
+        let parsed = parseCSVWithPapa(csvText);
+        if (!parsed || !parsed.length) {
+            // fallback: simple parsing by lines
+            const lines = csvText.split(/\r?\n/).filter(l => l.trim());
+            const headers = lines.shift().split(',').map(h => h.trim());
+            parsed = lines.map(line => {
+                const values = line.split(',');
+                const obj = {};
+                headers.forEach((h, i) => obj[h] = values[i] ?? '');
+                return obj;
+            });
+        }
 
         netflixData = parsed.filter(item => item && Object.keys(item).length);
         console.log("Loaded rows:", netflixData.length);
 
-        displayData(netflixData);
+        populateFilterOptions(netflixData);
+        filteredData = netflixData.slice();
+        displayData(filteredData);
         setStatus(`Loaded ${netflixData.length} items.`);
     } catch (error) {
         console.error(error);
@@ -126,6 +100,116 @@ async function loadNetflixData() {
             : "Failed to load the CSV. Check the server and file path.";
         setStatus(message);
     }
+}
+
+function getUniqueGenres(data) {
+    const set = new Set();
+    data.forEach(item => {
+        const listed = item.listed_in || item['listed_in'] || '';
+        listed.split(',').forEach(g => {
+            const t = g.trim();
+            if (t) set.add(t);
+        });
+    });
+    return Array.from(set).sort();
+}
+
+function getUniqueCountries(data) {
+    const set = new Set();
+    data.forEach(item => {
+        const country = item.country || item['country'] || '';
+        country.split(',').forEach(c => {
+            const t = c.trim();
+            if (t) set.add(t);
+        });
+    });
+    return Array.from(set).sort();
+}
+
+function getUniqueRatings(data) {
+    const set = new Set();
+    data.forEach(item => {
+        const r = item.rating || item['rating'] || '';
+        const t = (r || '').trim();
+        if (t) set.add(t);
+    });
+    return Array.from(set).sort();
+}
+
+function populateFilterOptions(data) {
+    const genreSelect = document.getElementById('genreSelect');
+    const countrySelect = document.getElementById('countrySelect');
+    const ratingSelect = document.getElementById('ratingSelect');
+
+    // Clear existing (keep first option)
+    [genreSelect, countrySelect, ratingSelect].forEach(sel => {
+        if (!sel) return;
+        while (sel.options.length > 1) sel.remove(1);
+    });
+
+    getUniqueGenres(data).forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g;
+        opt.textContent = g;
+        genreSelect.appendChild(opt);
+    });
+
+    getUniqueCountries(data).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        countrySelect.appendChild(opt);
+    });
+
+    getUniqueRatings(data).forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.textContent = r;
+        ratingSelect.appendChild(opt);
+    });
+}
+
+function applyFilters() {
+    const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
+    const genre = document.getElementById('genreSelect')?.value || '';
+    const country = document.getElementById('countrySelect')?.value || '';
+    const rating = document.getElementById('ratingSelect')?.value || '';
+
+    filteredData = netflixData.filter(movie => {
+        if (!movie) return false;
+        if (search) {
+            const title = (movie.title || movie['title'] || '').toLowerCase();
+            if (!title.includes(search)) return false;
+        }
+        if (genre) {
+            const listed = (movie.listed_in || movie['listed_in'] || '');
+            const parts = listed.split(',').map(s => s.trim());
+            if (!parts.includes(genre)) return false;
+        }
+        if (country) {
+            const c = (movie.country || movie['country'] || '');
+            const parts = c.split(',').map(s => s.trim());
+            if (!parts.includes(country)) return false;
+        }
+        if (rating) {
+            const r = (movie.rating || movie['rating'] || '').trim();
+            if (r !== rating) return false;
+        }
+        return true;
+    });
+
+    displayData(filteredData);
+    setStatus(`Showing ${filteredData.length} of ${netflixData.length} items.`);
+}
+
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('genreSelect').value = '';
+    document.getElementById('countrySelect').value = '';
+    document.getElementById('ratingSelect').value = '';
+    filteredData = netflixData.slice();
+    displayData(filteredData);
+    setStatus(`Showing ${filteredData.length} of ${netflixData.length} items.`);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
